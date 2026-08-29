@@ -373,6 +373,11 @@ func createTerragruntEvalContext(
 	functions := map[string]function.Function{}
 
 	maps.Copy(functions, tfscope.Functions())
+
+	if pctx.Experiments.Evaluate(experiment.MarkReadFunctions) {
+		markReadFileFunctions(pctx, tfscope.BaseDir, functions)
+	}
+
 	maps.Copy(functions, terragruntFunctions)
 	maps.Copy(functions, pctx.PredefinedFunctions)
 

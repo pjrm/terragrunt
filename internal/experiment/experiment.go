@@ -115,6 +115,12 @@ const (
 	// portal instead of local HCL. Nothing is gated on it yet; the login
 	// command and the portal-defined catalog land in follow-up PRs.
 	TGLogin = "tg-login"
+	// MarkReadFunctions gates automatic marking of the file paths touched by
+	// Terraform file functions (file, fileexists, filebase64, filemd5, filesha*,
+	// filebase64sha*, templatefile, fileset) as read, so reading-based filter
+	// expressions and discovery detect them without an explicit mark_as_read or
+	// mark_glob_as_read call.
+	MarkReadFunctions = "mark-read-functions"
 )
 
 const (
@@ -235,6 +241,9 @@ func NewExperiments() Experiments {
 		},
 		{
 			Name: TGLogin,
+		},
+		{
+			Name: MarkReadFunctions,
 		},
 	}
 }

@@ -1,0 +1,40 @@
+---
+name: mark-read-functions
+since: "1.1.4"
+---
+
+Automatically mark the files touched by Terraform's file functions as read, so reading-based filter expressions and discovery detect them without an explicit `mark_as_read` call.
+
+### `mark-read-functions` - What it does
+
+When enabled, Terragrunt records every file path referenced by a Terraform file-reading HCL function into the same reading tracker that already feeds `--filter 'reading=...'`, `find --read`, and Git-filter discovery. The wrapped functions are:
+
+- `file()` and `filebase64()`
+- `fileexists()`
+- `filemd5()`, `filesha1()`, `filesha256()`, `filesha512()`
+- `filebase64sha256()`, `filebase64sha512()`
+- `templatefile()`
+- `fileset()` — marks every file matched by the pattern, like `mark_glob_as_read()`
+
+Paths are recorded resolved against the same base directory Terragrunt uses when parsing the config, so the tracked path matches the file actually read.
+
+This makes reading-based filters work for files referenced through these functions without requiring the user to wrap each path in an explicit `mark_as_read()`. For example, a config that reads a shared YAML file only through `file()` will now be matched by `--filter 'reading=<path-to-that-file>'` when the experiment is enabled.
+
+Without the experiment enabled, these functions behave exactly as before and do not mark any files as read.
+
+```bash
+terragrunt run --all --experiment mark-read-functions -- plan
+```
+
+### `mark-read-functions` - How to provide feedback
+
+Provide your feedback on the [`mark-read-functions` GitHub Discussion](https://github.com/gruntwork-io/terragrunt/discussions/).
+
+### `mark-read-functions` - Criteria for stabilization
+
+To transition the `mark-read-functions` feature to a stable release, the following must be completed:
+
+- [ ] Confirm the wrapped function list covers the file functions users rely on.
+- [ ] Confirm path resolution matches user expectations across relative and absolute paths, including nested config directories.
+- [ ] Confirm `fileset` marking does not regress the behavior of the function itself.
+- [ ] Positive feedback from users relying on reading-based filters in production pipelines.
