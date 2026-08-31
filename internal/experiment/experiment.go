@@ -61,6 +61,10 @@ const (
 	// the module) and the mark_glob_as_read HCL function. Both are enabled
 	// by default.
 	MarkManyAsRead = "mark-many-as-read"
+	// MarkInputsAsRead makes discovery evaluate the inputs attribute so the reads
+	// declared there are recorded. Discovery otherwise skips inputs, which leaves
+	// mark_as_read there with no effect on reading-based filter expressions.
+	MarkInputsAsRead = "mark-inputs-as-read"
 	// AzureBackend enables Terragrunt-managed Azure Storage (azurerm) remote state
 	// bootstrap, delete, and migrate operations and, together with
 	// DependencyFetchOutputFromState, direct dependency state reads.
@@ -186,6 +190,9 @@ func NewExperiments() Experiments {
 		{
 			Name:   MarkManyAsRead,
 			Status: StatusCompleted,
+		},
+		{
+			Name: MarkInputsAsRead,
 		},
 		{
 			Name: AzureBackend,

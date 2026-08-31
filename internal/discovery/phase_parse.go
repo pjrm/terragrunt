@@ -13,6 +13,7 @@ import (
 
 	"github.com/gruntwork-io/terragrunt/internal/component"
 	"github.com/gruntwork-io/terragrunt/internal/configbridge"
+	"github.com/gruntwork-io/terragrunt/internal/experiment"
 	"github.com/gruntwork-io/terragrunt/internal/filter"
 	"github.com/gruntwork-io/terragrunt/internal/runner/run/creds"
 	"github.com/gruntwork-io/terragrunt/internal/telemetry"
@@ -379,7 +380,7 @@ func parseComponent(
 			}
 
 			ctx, parsingCtx := configbridge.NewParsingContext(ctx, l, parseV, parseOpts)
-			parsingCtx = parsingCtx.WithDecodeList(
+			decodeList := []config.PartialDecodeSectionType{
 				config.TerraformSource,
 				config.DependenciesBlock,
 				config.DependencyBlock,
@@ -389,7 +390,13 @@ func parseComponent(
 				config.ErrorsBlock,
 				config.RemoteStateBlock,
 				config.TerragruntVersionConstraints,
-			).WithSkipOutputsResolution()
+			}
+
+			if parsingCtx.Experiments.Evaluate(experiment.MarkInputsAsRead) {
+				decodeList = append(decodeList, config.InputsAttr)
+			}
+
+			parsingCtx = parsingCtx.WithDecodeList(decodeList...).WithSkipOutputsResolution()
 
 			if len(discovery.parserOptions) > 0 {
 				parsingCtx = parsingCtx.WithParseOption(discovery.parserOptions)

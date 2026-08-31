@@ -1490,3 +1490,140 @@ exclude {
 		})
 	}
 }
+
+func TestPartialParseInputsRecordsMarkedReads(t *testing.T) {
+	t.Parallel()
+
+	cfg := `
+inputs = {
+  region = "us-east-1"
+  policy = mark_as_read("policy.json.tftpl")
+}
+`
+
+	testCases := []struct {
+		name       string
+		decodeList []config.PartialDecodeSectionType
+		expectRead bool
+	}{
+		{
+			name:       "inputs in the decode list",
+			decodeList: []config.PartialDecodeSectionType{config.InputsAttr},
+			expectRead: true,
+		},
+		{
+			name:       "inputs not in the decode list",
+			decodeList: nil,
+			expectRead: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir := t.TempDir()
+			configPath := filepath.Join(tmpDir, config.DefaultTerragruntConfigPath)
+			markedPath := filepath.Join(tmpDir, "policy.json.tftpl")
+
+			l := logger.CreateLogger()
+			ctx, pctx := newTestParsingContext(t, venvtest.NewWithOSFS(), configPath)
+			pctx = pctx.WithDecodeList(tc.decodeList...)
+
+			terragruntConfig, err := config.PartialParseConfigString(ctx, pctx, l, configPath, cfg, nil)
+			require.NoError(t, err)
+
+			// Decoding inputs is for the marked reads only; the value is always discarded.
+			assert.Nil(t, terragruntConfig.Inputs)
+
+			if tc.expectRead {
+				assert.Contains(t, pctx.FilesRead.Paths(), markedPath)
+			} else {
+				assert.NotContains(t, pctx.FilesRead.Paths(), markedPath)
+			}
+		})
+	}
+}
+
+// TestPartialParseInputsWithUnresolvedDependencyOutputs covers the case with no locals
+// workaround, since locals are evaluated before dependency outputs exist. An unknown argument
+// means the marking function never runs, so only paths that are concrete during discovery get
+// marked, and an unresolved output must not fail the parse.
+func TestPartialParseInputsWithUnresolvedDependencyOutputs(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name          string
+		inputs        string
+		files         map[string]string
+		expectedReads []string
+	}{
+		{
+			name: "static path inside a call consuming an output",
+			inputs: `policy = templatefile(mark_as_read("policy.json.tftpl"), {
+    vpc_id = dependency.vpc.outputs.vpc_id
+  })`,
+			files:         map[string]string{"policy.json.tftpl": `{"vpc": "${vpc_id}"}`},
+			expectedReads: []string{"policy.json.tftpl"},
+		},
+		{
+			name:   "path interpolating an output",
+			inputs: `policy = mark_as_read("${dependency.vpc.outputs.name}.json")`,
+		},
+		{
+			name:   "path taken straight from an output",
+			inputs: `policy = mark_as_read(dependency.vpc.outputs.policy_path)`,
+		},
+		{
+			name:   "glob interpolating an output",
+			inputs: `policies = mark_glob_as_read("${dependency.vpc.outputs.name}/*.json")`,
+		},
+		{
+			name: "unresolved path next to a static one",
+			inputs: `policy  = mark_as_read("policy.json")
+  fromDep = mark_as_read("${dependency.vpc.outputs.name}.json")`,
+			expectedReads: []string{"policy.json"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := fmt.Sprintf(`
+dependency "vpc" {
+  config_path = "../vpc"
+}
+
+inputs = {
+  region = "us-east-1"
+  %s
+}
+`, tc.inputs)
+
+			tmpDir := t.TempDir()
+			configPath := filepath.Join(tmpDir, config.DefaultTerragruntConfigPath)
+
+			for name, content := range tc.files {
+				require.NoError(t, os.WriteFile(filepath.Join(tmpDir, name), []byte(content), 0644))
+			}
+
+			expectedPaths := make([]string, 0, len(tc.expectedReads))
+			for _, read := range tc.expectedReads {
+				expectedPaths = append(expectedPaths, filepath.Join(tmpDir, read))
+			}
+
+			l := logger.CreateLogger()
+			ctx, pctx := newTestParsingContext(t, venvtest.NewWithOSFS(), configPath)
+			pctx = pctx.WithDecodeList(config.DependencyBlock, config.InputsAttr).
+				WithSkipOutputsResolution()
+
+			terragruntConfig, err := config.PartialParseConfigString(ctx, pctx, l, configPath, cfg, nil)
+			require.NoError(t, err)
+
+			// Decoding inputs is for the marked reads only; the value is never persisted.
+			assert.Nil(t, terragruntConfig.Inputs)
+			assert.ElementsMatch(t, expectedPaths, pctx.FilesRead.Paths())
+		})
+	}
+}

@@ -39,7 +39,14 @@ const (
 	ExcludeBlock
 	ErrorsBlock
 	TerraformExtraArgs
+	InputsAttr
 )
+
+// terragruntInputs is a struct that can be used to only decode the inputs attribute.
+type terragruntInputs struct {
+	Inputs *cty.Value `hcl:"inputs,attr"`
+	Remain hcl.Body   `hcl:",remain"`
+}
 
 // terragruntIncludeMultiple is a struct that can be used to only decode the include block with labels.
 type terragruntIncludeMultiple struct {
@@ -578,12 +585,11 @@ func TerragruntConfigFromPartialConfig(
 //   - FeatureFlagsBlock: Parses the `feature` block in the config
 //   - EngineBlock: Parses the `engine` block in the config
 //   - ExcludeBlock : Parses the `exclude` block in the config
+//   - InputsAttr: Evaluates the `inputs` attribute for its side effects only; the value is discarded
 //
 // Note that the following blocks are always decoded:
 // - locals
 // - include
-// Note also that the following blocks are never decoded in a partial parse:
-// - inputs
 func PartialParseConfigString(
 	ctx context.Context,
 	pctx *ParsingContext,
@@ -859,6 +865,15 @@ func PartialParseConfig(
 				output.Errors.Merge(decoded.Errors)
 			} else {
 				output.Errors = decoded.Errors
+			}
+
+		case InputsAttr:
+			// Decoded only for the side effect: evaluating the attribute runs mark_as_read and
+			// friends so they register their paths. The value is discarded — dependency outputs
+			// are only placeholders here — and any error is swallowed, since no caller needs
+			// inputs and it is the section most likely to be unresolvable this early.
+			if err := file.Decode(&terragruntInputs{}, evalParsingContext); err != nil {
+				l.Debugf("Could not decode inputs during partial parse of %s: %s", file.ConfigPath, err)
 			}
 
 		default:

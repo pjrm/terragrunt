@@ -1,0 +1,18 @@
+---
+version: "v1.1.5"
+category: "experiments-added"
+---
+
+#### `mark-inputs-as-read` — Record the files marked as read in `inputs`
+
+`mark_as_read()` had no effect inside `inputs`. Discovery partial-parses each unit and evaluates only the sections it needs, and `inputs` was not one of them, so the call never ran and the path it named went unrecorded — reading-based filters such as `--filter 'reading=...'` could not match it. Moving the call into a `locals` block worked around that, since discovery does evaluate `locals`, but that is not always possible: `locals` are evaluated before dependency outputs exist, so a path used alongside a dependency output cannot be marked there.
+
+Enable the new `mark-inputs-as-read` experiment to make discovery evaluate `inputs` as well, so `mark_as_read()` registers the path wherever it is called:
+
+```bash
+terragrunt find --reading --experiment mark-inputs-as-read
+```
+
+Note that functions with side effects called **directly** in `inputs` now run during discovery, as they always have in `locals`; the idiomatic `locals`-then-reference placement for `sops_decrypt_file()` and `run_cmd()` is unaffected.
+
+See the [experiment documentation](/reference/experiments/active#mark-inputs-as-read) for the full behavior and what has to land before it stabilizes.

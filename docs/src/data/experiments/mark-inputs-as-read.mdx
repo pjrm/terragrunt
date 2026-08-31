@@ -1,0 +1,49 @@
+---
+name: mark-inputs-as-read
+since: "1.1.5"
+---
+
+Evaluate the `inputs` attribute during discovery so the files marked as read there are recorded.
+
+### `mark-inputs-as-read` - What it does
+
+Discovery partial-parses each unit and evaluates only the sections it needs. `inputs` is not one of them, so `mark_as_read()` called inside `inputs` never ran and the path it named went unrecorded, leaving reading-based filter expressions such as `--filter 'reading=...'` unable to match it.
+
+When enabled, `inputs` is added to the sections discovery evaluates, so the reads declared there are recorded like any other. Nothing consumes the decoded value; `inputs` is evaluated purely so the functions inside it run and register their paths.
+
+```bash
+terragrunt find --reading --experiment mark-inputs-as-read
+```
+
+Moving the call into a `locals` block is the workaround this replaces, since discovery already evaluates `locals`. That workaround does not always apply: `locals` are evaluated before dependency outputs exist, so a path used alongside a dependency output cannot be marked there.
+
+```hcl
+dependency "vpc" {
+  config_path = "../vpc"
+}
+
+inputs = {
+  policy = templatefile(mark_as_read("policy.json.tftpl"), {
+    vpc_id = dependency.vpc.outputs.vpc_id
+  })
+}
+```
+
+`mark_as_read()` returns the path it was given, so it composes inline like this. `mark_glob_as_read()` works the same way.
+
+No dependency is run to record the path. Dependency outputs are left as a placeholder during discovery, which is enough for the surrounding expression to evaluate. Errors from evaluating `inputs` this early are logged at debug level and skipped rather than failing discovery, so a config whose inputs cannot resolve until apply time still discovers cleanly.
+
+Because `inputs` is evaluated during discovery, functions with side effects called directly in `inputs` run there too, as they always have when called from `locals`. The idiomatic placement for `sops_decrypt_file()` and `run_cmd()` is a `locals` block referenced from `inputs`, which is unaffected: those already ran during discovery and are cached per path.
+
+### `mark-inputs-as-read` - How to provide feedback
+
+Provide your feedback on the [Terragrunt GitHub Discussions](https://github.com/gruntwork-io/terragrunt/discussions).
+
+### `mark-inputs-as-read` - Criteria for stabilization
+
+To transition the `mark-inputs-as-read` feature to a stable release, the following must be completed:
+
+- [ ] Confirm evaluating `inputs` during discovery does not measurably slow discovery on large unit counts.
+- [ ] Confirm no config is newly broken by `inputs` being evaluated before dependency outputs resolve.
+- [ ] Confirm side effects from functions called directly in `inputs` running during discovery are acceptable.
+- [ ] Positive feedback from users relying on reading-based filters in production pipelines.
