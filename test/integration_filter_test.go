@@ -18,8 +18,8 @@ const (
 	testFixtureFilterDAG              = "fixtures/find/dag"
 	testFixtureFilterList             = "fixtures/list/basic"
 	testFixtureFilterSource           = "fixtures/filter-source"
-	testFixtureMinimizeParsing        = "fixtures/filter/minimize-parsing"
-	testFixtureMinimizeParsingDestroy = "fixtures/filter/minimize-parsing-destroy"
+	
+	
 	testFixtureExcludeByDefault       = "fixtures/exclude-by-default"
 	testFixtureFilterMarkAsRead       = "fixtures/filter/mark-as-read"
 )
@@ -1263,17 +1263,7 @@ func TestFiltersFileFlag(t *testing.T) {
 	}
 }
 
-// getJSONRunNames extracts unit names from records map for error messages
-func getJSONRunNames(recordsByUnit map[string]*report.JSONRun) []string {
-	names := make([]string, 0, len(recordsByUnit))
-	for name := range recordsByUnit {
-		names = append(names, name)
-	}
 
-	sort.Strings(names)
-
-	return names
-}
 
 // TestFilterCompoundNegationDropsUnrelatedUnits pins that a filter whose negation comes first
 // still restricts on its positive operand. A unit matching neither operand used to survive,

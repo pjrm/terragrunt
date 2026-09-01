@@ -743,15 +743,15 @@ inputs = {
 }
 
 func terraformState(value string) []byte {
-	return []byte(fmt.Sprintf(
+	return fmt.Appendf(nil, 
 		`{"version":4,"outputs":{"producer_value":{"sensitive":false,"type":"string","value":%q}}}`,
 		value,
-	))
+	)
 }
 
 func terraformOutput(value string) []byte {
-	return []byte(fmt.Sprintf(
+	return fmt.Appendf(nil, 
 		`{"producer_value":{"sensitive":false,"type":"string","value":%q}}`,
 		value,
-	))
+	)
 }

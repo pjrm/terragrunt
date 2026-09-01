@@ -239,11 +239,11 @@ func TestRegistryGetterCachesCLIConfig(t *testing.T) {
 
 	serverURL, err := url.Parse(server.URL)
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(configPath, []byte(fmt.Sprintf(`
+	require.NoError(t, os.WriteFile(configPath, fmt.Appendf(nil, `
 credentials %q {
   token = "configured-token"
 }
-`, serverURL.Hostname())), 0o600))
+`, serverURL.Hostname()), 0o600))
 
 	v := venvtest.NewWithOSFS().
 		WithHTTP(server.Client()).
@@ -275,11 +275,11 @@ func TestRegistryGetterUsesInjectedVenvForCLIConfig(t *testing.T) {
 
 	serverURL, err := url.Parse(server.URL)
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(homeDir, ".tofurc"), []byte(fmt.Sprintf(`
+	require.NoError(t, os.WriteFile(filepath.Join(homeDir, ".tofurc"), fmt.Appendf(nil, `
 credentials %q {
   token = "configured-token"
 }
-`, serverURL.Hostname())), 0o600))
+`, serverURL.Hostname()), 0o600))
 
 	v := venvtest.NewWithOSFS().
 		WithHTTP(server.Client()).
