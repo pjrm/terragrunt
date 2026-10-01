@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	testFixtureMarkManyAsReadRelpath = "fixtures/mark-many-as-read-relpath"
+	
 	testFixtureMarkGlobAsRead        = "fixtures/mark-glob-as-read"
 )
 

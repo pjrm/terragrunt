@@ -1705,10 +1705,10 @@ func TestBuildDownloadClientThreadsVenvToOCIStore(t *testing.T) {
 	home := t.TempDir()
 	require.NoError(t, os.WriteFile(
 		filepath.Join(home, ".tofurc"),
-		[]byte(fmt.Sprintf(
+		fmt.Appendf(nil, 
 			"\noci_credentials %q {\n  %s = %q\n  %s = %q\n}\n",
 			"registry.example.com", "username", "wired", "password", "fake-secret-wired",
-		)),
+		),
 		0o600,
 	))
 

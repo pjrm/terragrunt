@@ -20,19 +20,7 @@ import (
 
 // NOTE: We don't run these tests in parallel because it modifies the environment variable, so it can affect other tests
 
-func extractHostServiceLine(t *testing.T, terraformrc, service string) string {
-	t.Helper()
 
-	for line := range strings.SplitSeq(terraformrc, "\n") {
-		if strings.Contains(line, `"`+service+`"`) {
-			return line
-		}
-	}
-
-	t.Fatalf("service %q not found in .terraformrc:\n%s", service, terraformrc)
-
-	return ""
-}
 
 func TestTerragruntDownloadDir(t *testing.T) {
 	helpers.CleanupTerraformFolder(t, testFixtureLocalRelativeDownloadPath)

@@ -499,7 +499,7 @@ func mockOptions(
 	nonInteractive bool,
 	terragruntSource string,
 	ignoreDependencyErrors bool,
-	includeExternalDependencies bool,
+	_ bool,
 	_ log.Level,
 	debug bool,
 ) *options.TerragruntOptions {
